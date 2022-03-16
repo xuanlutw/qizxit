@@ -12,6 +12,8 @@ import pyzx as zx
 
 from functools import reduce
 
+# This function reduce the number of the T gate in a quantum circuit
+#   It implement the step 5 in our report
 def reduce_t(qc):
     dag = circuit_to_dag(qc)
     fl  = True
@@ -116,6 +118,7 @@ def reduce_t(qc):
     # dag_drawer(dag)
     return dag_to_circuit(dag)
 
+# This function read the esop file output by ABC
 def read_esop(filepath):
     with open(filepath, "r") as fp:
         lines = fp.readlines()
@@ -146,7 +149,7 @@ def read_esop(filepath):
             'esop_c': esop_c,
             'esop_x': esop_x}
 
-# Add Expand Toffoli
+# Add Expand Toffoli to a qc
 def add_toffoli(qc, c1, c2, x):
     qc.h(x)
     qc.cx(c2, x)
@@ -164,7 +167,7 @@ def add_toffoli(qc, c1, c2, x):
     qc.tdg(c2)
     qc.cx(c1, c2)
 
-# Add Expand Toffoli Reverse
+# Add Reverse Expand Toffoli to a qc
 def add_toffoli_r(qc, c1, c2, x):
     qc.cx(c1, c2)
     qc.tdg(c2)
@@ -182,7 +185,7 @@ def add_toffoli_r(qc, c1, c2, x):
     qc.cx(c2, x)
     qc.h(x)
 
-# ESOP -> MCX
+# Convert ESOP to MCX, i.e., step 2
 def esop_mcx(filepath):
     esop   = read_esop(filepath)
     n_pi   = esop['n_pi']
@@ -213,7 +216,7 @@ def esop_mcx(filepath):
 
     return qc
 
-# ESOP -> CCX
+# Convert ESOP to CCX, i.e., step 3
 def esop_ccx(filepath):
     esop   = read_esop(filepath)
     n_pi   = esop['n_pi']
@@ -260,7 +263,7 @@ def esop_ccx(filepath):
 
     return qc
 
-# ESOP -> CX, trivial
+# Convert ESOP to naive/trivial CX
 def esop_cx_trivial(filepath):
     esop   = read_esop(filepath)
     n_pi   = esop['n_pi']
@@ -307,7 +310,7 @@ def esop_cx_trivial(filepath):
 
     return qc
 
-# ESOP -> CX
+# Convert ESOP to CX, i.e., step 4
 def esop_cx(filepath):
     esop   = read_esop(filepath)
     n_pi   = esop['n_pi']
@@ -354,6 +357,7 @@ def esop_cx(filepath):
 
     return qc
 
+# This function call pyzx
 def zx_simp(qc):
     qasm = qc.qasm().replace('pi', '3.14159')
     c      = zx.Circuit.from_qasm(qasm)
@@ -364,9 +368,11 @@ def zx_simp(qc):
     qc_opt = QuantumCircuit.from_qasm_str(qasm)
     return qc_opt
 
+# Count the number of gates in the qc
 def op_count(qc):
     return reduce(lambda x, y: x + y[1], list(qc.count_ops().items()), 0)
 
+# Test the equality of two qc
 def test_eq(qc1, qc2):
     uni_sim = Aer.get_backend('unitary_simulator')
     uni1 = execute(qc1, uni_sim).result().get_unitary()
@@ -376,18 +382,18 @@ def test_eq(qc1, qc2):
     print(sum(sum((uni1 - uni2) < 1e-10)))
     print(uni1 - uni2)
 
+# This function run the experinment on specific ESOP file
 def run_exp(filepath):
     qc_cxt = esop_cx_trivial(filepath)
     qc_cx  = esop_cx(filepath)
     qc_t   = reduce_t(qc_cx)
-    print('HI')
-    print(op_count(qc_cxt), op_count(qc_t))
+    print('Run first zx')
     qc_zxt = zx_simp(qc_cxt)
-    print('HI')
+    print('Run second zx')
     qc_zx  = zx_simp(qc_t)
     print(op_count(qc_cxt), op_count(qc_zxt), op_count(qc_t), op_count(qc_zx))
 
-run_exp('abc/a.esop')
+# run_exp('abc/a.esop')
 # qc_ccx = esop_ccx('abc/b.esop')
 # qc_mcx = esop_mcx('abc/b.esop')
 # qc     = esop_cx_trivial('abc/b.esop')
